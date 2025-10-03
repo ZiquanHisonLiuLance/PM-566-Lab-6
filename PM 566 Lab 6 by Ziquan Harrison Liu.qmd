@@ -1,0 +1,50 @@
+---
+title: "PM 566 Lab 6"
+author: "Ziquan 'Harrison' Liu"
+format: 
+  html:
+    embed-resources: true
+fig-width: 8
+fig-heigth: 6
+---
+# Required Package
+```{r}
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+library(readr)
+```
+
+```{r}
+mt_samples <- read_csv("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/00_mtsamples/mtsamples.csv")
+mt_samples <- mt_samples |>
+  select(description, medical_specialty, transcription)
+head(mt_samples)
+```
+# Question 1: What specialties do we have?
+```{r}
+mt_samples %>%
+  count(medical_specialty, sort = TRUE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
