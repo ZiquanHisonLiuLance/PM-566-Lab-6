@@ -7,12 +7,17 @@ format:
 fig-width: 8
 fig-heigth: 6
 ---
+```{r}
+knitr::opts_chunk$set(eval = FALSE, include  = TRUE)
+```
+
 # Required Package
 ```{r}
 library(tidytext)
 library(dplyr)
 library(ggplot2)
 library(readr)
+library(tidyr) # for Q6
 ```
 
 ```{r}
@@ -26,25 +31,111 @@ head(mt_samples)
 mt_samples %>%
   count(medical_specialty, sort = TRUE)
 ```
+## Answers: Based on the resulte above, there are some categories related though overall not so much.  all unique specialty, so there is no obvious overlap.
 
+# Question 2
+```{r}
+# Tokenize the the words in the transcription column
+# Count the number of times each token appears
+# Visualize the top 20 most frequent words
+mt_samples %>%
+  unnest_tokens(word, transcription)  %>%
+  count(word, sort = TRUE)  %>%
+  top_n(20,n)  %>%
+  ggplot(aes(x = reorder(word,n), y = n)) +
+  geom_col() +
+  coord_flip() +
+  labs(x="Word", y="Count", title = "Top 20 Most Frequent Words")
+```
+## Answers: It does mot make sense since top words were stop words like "the" , "and", and "was", etc are not insight words, just people will generally use such words in communication.
 
+# Question 3
+```{r}
+mt_samples %>%
+  unnest_tokens(word, transcription)  %>%
+  anti_join(stop_words %>% filter(!word %in% c("right"))
+            , by = "word") %>%
+  filter(!grepl("^[0-9]+$", word)) %>%
+  count(word, sort = TRUE)  %>%
+  top_n(20,n)  %>%
+  ggplot(aes(x = reorder(word,n), y = n)) +
+  geom_col() +
+  coord_flip() +
+  labs(x="Word", y="Count", title = "Top 20 Most Frequent Words (Excluding Stop Words & Numbers)")
+```
+## Answers: After stop words were removed, the interesting insight was showed from the output. The patient rank top1 frequent ussing in medical.That is helpful of us to understand what this dataset talked about. (the original code part: However, the word "right" can be use as both stop words and words meaning as direction. Here, the coding let "right" being removed, which may increase concern like "right" was utilized as medical term such as "right ventricle".)
 
+# Question 4
+```{r}
+# Bi-grams
+mt_samples %>%
+  unnest_tokens(bigram, transcription, token = "ngrams", n=2)  %>%
+  count(bigram, sort = TRUE)  %>%
+  top_n(20,n)
+  
+# Tri-grams
+mt_samples %>%
+  unnest_tokens(bigram, transcription, token = "ngrams", n=3)  %>%
+  count(bigram, sort = TRUE)  %>%
+  top_n(20,n)
+```
+## Answers:In the Bi-grams, the most common phrase are "the patient" and "of the" which are not really insightful. However, for the Tri-grams more information were provided, such as "the operating romm", which let us suspect that one of the main point of this dataset was relevant to the surgery.
 
+# Question 5
+```{r}
+mt_samples %>%
+  unnest_tokens(bigram, transcription, token = "ngrams", n=2)  %>%
+  separate(bigram,c("word1","word2"), sep="") %>%
+  filter(word1 =="patients" | word2 == "operating") %>%
+  count(word1,word2, sort = TRUE) 
+```
 
+# Question 6
+```{r}
+mt_samples %>%
+  unnest_tokens(word, transcription)  %>%
+  anti_join(stop_words %>% filter(!word %in% c("right"))
+            , by = "word") %>%
+  filter(!grepl("^[0-9]+$", word)) %>%
+  group_by(medical_specialty) %>%
+  count(word, sort = TRUE)  %>%
+  top_n(5,n)  %>%
+  arrange(medical_specialty, desc(n))
+```
+## Answers: The result above,the table showed the 5 most-used words for each specialty.
 
+# Question 7
+```{r}
+# Seventh-grams
+mt_samples %>%
+  unnest_tokens(bigram, transcription, token = "ngrams", n=7)  %>%
+  count(bigram, sort = TRUE)  %>%
+  top_n(20,n)
+```
+## Answers: Based on th result above, when we increase bigrams into 7, the infomration from the dataset became more clear since we can find the rubric of surgery were confirmed based on the description multimple times
+```{r}
+# Victor's example code
+top_specialties <- mt_samples %>%
+  count(medical_specialty, sort = TRUE)  %>%
+  top_n(4,n)  %>%
+  pull(medical_specialty)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+mt_samples %>%
+  filter(medical_specialty %in% top_specialties) %>%
+  unnest_tokens(word, transcription) %>%
+  anti_join(stop_words %>% filter(!word %in% c("right"))
+            , by = "word") %>%
+  filter(!grepl("^[0-9]+$", word)) %>%
+  group_by(medical_specialty, word) %>%
+  summarise(n=n(),.groups = "drop") %>%
+  group_by(medical_specialty) %>%
+  top_n(10,n) %>%
+  ungroup() %>%
+  mutate(word = reorder_within(word, n, medical_specialty)) %>%
+  ggplot(aes(x = n, y = word, fill = medical_specialty)) +
+  geom_col() +
+  scale_y_reordered()+
+  facet_wrap(~medical_specialty, scales = "free_y")+
+  labs(x="Count", y="Word", title = "Top 10 Words by Specialty") +
+  theme(legend.position = "none")
+```
